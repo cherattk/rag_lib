@@ -1,0 +1,8 @@
+# Python build and metadata artifacts
+.venv/
+*.egg-info/
+*.egg/
+build/
+dist/
+__pycache__/
+*.pyc

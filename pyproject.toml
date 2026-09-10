@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=61.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rag_lib"
+dynamic = ["version"]
+description = "A RAG library"
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [
+    { name = "Karim cheratt", email = "karimcheratt.dev@yahoo.com" },
+]
+license = { text = "MIT" }
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+keywords = ["RAG", "NLP", "transformers", "library"]
+urls = { Homepage = "https://github.com/cherattk/rag_lib" }
+dependencies = [
+    "sentence-transformers==6.0.1",
+    "transformers==5.16.1",
+    "pydantic==2.13.5",
+    "torch==2.14.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+    "pytest-mock==3.15.1",
+    "pre-commit==4.6.2"
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools_scm]
+# Enabling this tells setuptools-scm to look at git tags
