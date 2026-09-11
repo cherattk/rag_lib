@@ -2,7 +2,7 @@ import asyncio
 from sentence_transformers import SentenceTransformer
 
 
-class TransformerEmbedding:
+class TSF_Embedding:
     def __init__(self, model_name: str = "all-MiniLM-L6-v2") -> None:
 
         self._model_name = model_name

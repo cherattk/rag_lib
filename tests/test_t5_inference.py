@@ -1,12 +1,13 @@
 import pytest
+from torch import tensor
+from pytest_mock import mocker
 from unittest.mock import MagicMock
-from t5_inference import T5Inference
 from transformers import T5ForConditionalGeneration, T5Tokenizer
 
 # from transformers.tokenization_utils_base import BatchEncoding
-from torch import tensor
 
-from pytest_mock import mocker
+
+from rag_lib.t5_inference import T5Inference
 
 
 @pytest.fixture
@@ -113,7 +114,7 @@ class TestGenerateAnswer:
     ) -> None:
 
         mock_thread = mocker.patch(
-            "t5_inference.asyncio.to_thread",
+            "rag_lib.t5_inference.asyncio.to_thread",
             new_callable=mocker.AsyncMock,
         )
 

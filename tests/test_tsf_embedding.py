@@ -3,7 +3,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from sentence_transformers import SentenceTransformer
-from tsf_embedding import TransformerEmbedding
+from rag_lib.tsf_embedding import TSF_Embedding
 
 
 # --- Fixtures ---
@@ -19,7 +19,7 @@ def mock_model():
 @pytest.fixture
 def tsf_embedding(mock_model):
     """Fixture to create an instance of your class with a mocked model."""
-    service = TransformerEmbedding(model_name="all-MiniLM-L6-v2")
+    service = TSF_Embedding(model_name="all-MiniLM-L6-v2")
     with patch.object(service, "_get_model", return_value=mock_model):
         yield service
 
@@ -31,7 +31,7 @@ class TestEmbeddingLogic:
     ) -> None:
 
         mock_thread = mocker.patch(
-            "tsf_embedding.asyncio.to_thread",
+            "rag_lib.tsf_embedding.asyncio.to_thread",
             new_callable=mocker.AsyncMock,
         )
 
