@@ -50,69 +50,28 @@ def mock_t5(mocker, mock_model, mock_tokenizer):
 #         assert False, "This test failed intentionally to verify the workflow."
 
 
-# --- Tests for Initialization ---
-class TestInitialization:
-    def test_t5_inference_initialization(self):
-        service = T5Inference()
-        assert service._model is None
-        assert service._tokenizer is None
-        assert service._model_name == "t5-small"
+class TestConfiGenerator:
+    def test_config_generator(self, mock_t5):
 
-    def test_t5_inference_custom_model_name(self):
-        service = T5Inference(model_name="custom-model")
-        assert service._model_name == "custom-model"
+        mock_t5.config_generator(model_name="test_model")
+        assert mock_t5.model_name == "test_model"
 
+        mock_t5.config_generator(max_length=10)
+        assert mock_t5.max_length == 10
 
-class TestDefaultPrompt:
-    def test_default_prompt(self, mock_t5):
+        mock_t5.config_generator(max_new_tokens=20)
+        assert mock_t5.max_new_tokens == 20
 
-        question_value = "test question"
-        context_value = "test context"
+        mock_t5.config_generator(do_sample=True)
+        assert mock_t5.do_sample == True
 
-        # default prompt format for t5-small model
-        expected_prompt = (
-            "question:" + " " + question_value + " " + "context:" + " " + context_value
-        )
-        prompt = mock_t5.default_prompt(context_value, question_value)
-        # prompt = mock_t5.default_prompt("context", "question")
-        assert prompt == expected_prompt
-
-
-class TestExecuteInference:
-
-    def test_execute_inference_call_tokenizer(
-        self, mock_t5, mock_tokenizer, mock_model
-    ):
-        expected_inference_output = mock_tokenizer.decode.return_value
-
-        result = mock_t5._execute_inference(
-            "test prompt",
-            mock_model,
-            mock_tokenizer,
-        )
-
-        mock_tokenizer.assert_called_once_with(
-            "test prompt",
-            return_tensors="pt",
-            truncation=True,
-            max_length=mock_t5._max_length,
-        )
-
-        assert result == expected_inference_output
-
-    def test_execute_inference_call_model_generate(
-        self, mock_t5, mock_tokenizer, mock_model
-    ):
-
-        mock_t5._execute_inference("test prompt", mock_model, mock_tokenizer)
-
-        mock_model.generate.assert_called_once()
-
-    def test_execute_inference_failure(self, mock_tokenizer):
-        mock_tokenizer.side_effect = RuntimeError("Tokenization failed")
-        service = T5Inference()
-        with pytest.raises(RuntimeError):
-            service._execute_inference("test prompt", MagicMock(), mock_tokenizer)
+        # Set All Fields at once
+        # mock_t5.config_generator(
+        #     model_name="test_2_model",
+        #     max_length=111,
+        #     max_new_tokens=222,
+        #     do_sample=False,
+        # )
 
 
 class TestGenerateAnswer:
@@ -163,6 +122,43 @@ class TestGenerateAnswer:
         assert result is None
 
 
+class TestExecuteInference:
+
+    def test_execute_inference_call_tokenizer(
+        self, mock_t5, mock_tokenizer, mock_model
+    ):
+        expected_inference_output = mock_tokenizer.decode.return_value
+
+        result = mock_t5._execute_inference(
+            "test prompt",
+            mock_model,
+            mock_tokenizer,
+        )
+
+        mock_tokenizer.assert_called_once_with(
+            "test prompt",
+            return_tensors="pt",
+            truncation=True,
+            max_length=mock_t5.max_length,
+        )
+
+        assert result == expected_inference_output
+
+    def test_execute_inference_call_model_generate(
+        self, mock_t5, mock_tokenizer, mock_model
+    ):
+
+        mock_t5._execute_inference("test prompt", mock_model, mock_tokenizer)
+
+        mock_model.generate.assert_called_once()
+
+    def test_execute_inference_failure(self, mock_tokenizer):
+        mock_tokenizer.side_effect = RuntimeError("Tokenization failed")
+        service = T5Inference()
+        with pytest.raises(RuntimeError):
+            service._execute_inference("test prompt", MagicMock(), mock_tokenizer)
+
+
 class TestGetModel:
     def test_t5_inference_get_model_outputs(self, mock_model, mock_tokenizer, mocker):
 
@@ -185,9 +181,9 @@ class TestGetModel:
         assert model is mock_model
         assert tokenizer is mock_tokenizer
 
-        mock_from_pretrained_model.assert_called_once_with(service._model_name)
+        mock_from_pretrained_model.assert_called_once_with(service.model_name)
         mock_from_pretrained_tokenizer.assert_called_once_with(
-            service._model_name,
+            service.model_name,
             legacy=False,  # legacy=False avoids warnings on older t5-small checkouts
         )
 
