@@ -2,7 +2,10 @@ import pytest
 from torch import tensor
 from pytest_mock import mocker
 from unittest.mock import MagicMock
-from transformers import T5ForConditionalGeneration, T5Tokenizer
+from transformers import (
+    PreTrainedModel,
+    PreTrainedTokenizerFast,
+)
 
 # from transformers.tokenization_utils_base import BatchEncoding
 
@@ -12,14 +15,19 @@ from rag_lib.t5_inference import T5Inference
 
 @pytest.fixture
 def mock_model():
-    model = MagicMock(spec=T5ForConditionalGeneration)
+    model = MagicMock(spec=PreTrainedModel)
+
+    # 2. Add the dynamic generate method hook onto the mock instance
+    model.generate = MagicMock()
+
+    # 3. Apply your fake tensor output values
     model.generate.return_value = tensor([[1.0, 2.0, 3.0]])
     return model
 
 
 @pytest.fixture
 def mock_tokenizer():
-    tokenizer = MagicMock(spec=T5Tokenizer)
+    tokenizer = MagicMock(spec=PreTrainedTokenizerFast)
 
     tokenizer.return_value = {"input_ids": tensor([[4.0, 5.0, 6.0]])}
 
@@ -156,15 +164,17 @@ class TestGenerateAnswer:
 
 
 class TestGetModel:
-    def test_t5_inference_get_model_outputs(self, mock_tokenizer, mock_model, mocker):
+    def test_t5_inference_get_model_outputs(self, mock_model, mock_tokenizer, mocker):
+
+        mock_model.to.return_value = mock_model
 
         mock_from_pretrained_model = mocker.patch(
-            "transformers.T5ForConditionalGeneration.from_pretrained",
+            "transformers.AutoModelForSeq2SeqLM.from_pretrained",
             return_value=mock_model,
         )
 
         mock_from_pretrained_tokenizer = mocker.patch(
-            "transformers.T5Tokenizer.from_pretrained",
+            "transformers.AutoTokenizer.from_pretrained",
             return_value=mock_tokenizer,
         )
 
@@ -176,7 +186,10 @@ class TestGetModel:
         assert tokenizer is mock_tokenizer
 
         mock_from_pretrained_model.assert_called_once_with(service._model_name)
-        mock_from_pretrained_tokenizer.assert_called_once_with(service._model_name)
+        mock_from_pretrained_tokenizer.assert_called_once_with(
+            service._model_name,
+            legacy=False,  # legacy=False avoids warnings on older t5-small checkouts
+        )
 
     @pytest.mark.asyncio
     async def test_generate_answer_empty_prompt(self, mock_t5):
