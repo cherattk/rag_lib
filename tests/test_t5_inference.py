@@ -38,7 +38,7 @@ def mock_tokenizer():
 
 @pytest.fixture
 def mock_t5(mocker):
-    service = T5Inference()  # IMPORTANT Use default value to Mock
+    service = T5Inference("test-name")  # IMPORTANT Use default value to Mock
     mocker.patch.object(service, "_init_model")
     return service
 
@@ -48,7 +48,19 @@ def mock_t5(mocker):
 #         assert False, "This test failed intentionally to verify the workflow."
 
 
-class TestInitModel:
+class TestInitialization:
+    def test_init_T5Inference_empty_model_name(self):
+        # 1. Arrange: Define the invalid inputs you want to test
+        invalid_inputs = ["", " ", "   "]
+
+        # 2. Act & Assert: Verify that each invalid input raises a ValueError
+        for invalid_name in invalid_inputs:
+            with pytest.raises(ValueError) as exc_info:
+                T5Inference(model_name=invalid_name)
+
+            # 3. Optional: Verify that the exact error message is correct
+        assert "model_name cannot be empty" in str(exc_info.value)  # type: ignore
+
     def test_init_model(self, mock_model, mock_tokenizer, mocker):
 
         mock_model.to.return_value = mock_model
@@ -63,7 +75,7 @@ class TestInitModel:
             return_value=mock_tokenizer,
         )
 
-        service = T5Inference()
+        service = T5Inference(model_name="test_model_name")
 
         service._init_model()
 
@@ -84,23 +96,24 @@ class TestConfiGenerator:
         assert mock_t5.model is None
         assert mock_t5.tokenizer is None
 
-    def test_config_generator(self, mock_t5):
+    def test_config_generator(self):
 
+        service = T5Inference(model_name="test-model")
         # Arrange
         expected_default_config = {
-            "model_name": "",
+            "model_name": "test-model",
             "max_length": 512,
             "max_new_tokens": 256,
             "do_sample": False,
         }
 
         # Test 1
-        default_config = mock_t5.config_generator()
+        default_config = service.config_generator()
 
         assert default_config == expected_default_config
 
         # Set All Fields at once
-        new_config = mock_t5.config_generator(
+        new_config = service.config_generator(
             model_name="model_name",
             max_length=111,
             max_new_tokens=222,
@@ -113,18 +126,18 @@ class TestConfiGenerator:
             "do_sample": False,
         }
 
-        # Test 3 set config field one at time
-        mock_t5.config_generator(model_name="test_model")
-        assert mock_t5.model_name == "test_model"
+        # Test 3 : set config field one at time
+        service.config_generator(model_name="test_model")
+        assert service.model_name == "test_model"
 
-        mock_t5.config_generator(max_length=10)
-        assert mock_t5.max_length == 10
+        service.config_generator(max_length=10)
+        assert service.max_length == 10
 
-        mock_t5.config_generator(max_new_tokens=20)
-        assert mock_t5.max_new_tokens == 20
+        service.config_generator(max_new_tokens=20)
+        assert service.max_new_tokens == 20
 
-        mock_t5.config_generator(do_sample=True)
-        assert mock_t5.do_sample == True
+        service.config_generator(do_sample=True)
+        assert service.do_sample == True
 
 
 class TestGenerateAnswer:
@@ -183,7 +196,7 @@ class TestGenerateAnswer:
         mocker.patch.object(
             T5Inference, "_init_model", side_effect=RuntimeError("Model loading failed")
         )
-        service = T5Inference()
+        service = T5Inference(model_name="test-name")
         result = await service.generate_answer(prompt="test prompt")
 
         assert result is None
@@ -221,6 +234,6 @@ class TestExecuteInference:
 
     def test_execute_inference_failure(self, mock_tokenizer):
         mock_tokenizer.side_effect = RuntimeError("Tokenization failed")
-        service = T5Inference()
+        service = T5Inference(model_name="test-name")
         with pytest.raises(RuntimeError):
             service._execute_inference("test prompt", MagicMock(), mock_tokenizer)

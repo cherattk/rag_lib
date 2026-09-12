@@ -20,16 +20,22 @@ class T5Inference:
     """A class for performing inference using the T5 model.
 
     Attributes:
-        model_name (str): Name of the T5 model to use (default: "t5-small").
+        model_name (str): Name of the T5 model to use.
         _model: The loaded T5 model instance.
         _tokenizer: The loaded T5 tokenizer instance.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, model_name: str) -> None:
         """
         Initialize the T5Inference class.
         """
-        self._model_name: str = ""
+        # 1. Run the validation check first
+        if model_name.strip() == "":
+            raise ValueError(f"model_name cannot be empty")
+
+        # 2. Assign the variable if validation passes
+        self._model_name = model_name.strip()
+
         self._max_length: int = 512  # total answer prompt + generated answer tokens
         self._max_new_tokens: int = 256  # generated asnwer
         self._do_sample = False
@@ -78,7 +84,7 @@ class T5Inference:
         do_sample: bool = False,
     ) -> dict[str, str | int | bool]:
 
-        if model_name != "" and model_name != self._model_name:
+        if model_name.strip() != "" and model_name != self._model_name:
             self._model_name = model_name
             self._model = None
             self._tokenizer = None
@@ -100,6 +106,7 @@ class T5Inference:
         }
 
     def _init_model(self) -> tuple[PreTrainedModel, PreTrainedTokenizerFast]:
+
         try:
             with self._lock:
                 if self._model is None or self._tokenizer is None:
