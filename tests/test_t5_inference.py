@@ -37,11 +37,9 @@ def mock_tokenizer():
 
 
 @pytest.fixture
-def mock_t5(mocker, mock_model, mock_tokenizer):
+def mock_t5(mocker):
     service = T5Inference()  # IMPORTANT Use default value to Mock
-    mocker.patch.object(
-        service, "_get_model", return_value=(mock_model, mock_tokenizer)
-    )
+    mocker.patch.object(service, "_init_model")
     return service
 
 
@@ -50,9 +48,72 @@ def mock_t5(mocker, mock_model, mock_tokenizer):
 #         assert False, "This test failed intentionally to verify the workflow."
 
 
+class TestInitModel:
+    def test_init_model(self, mock_model, mock_tokenizer, mocker):
+
+        mock_model.to.return_value = mock_model
+
+        mock_from_pretrained_model = mocker.patch(
+            "transformers.AutoModelForSeq2SeqLM.from_pretrained",
+            return_value=mock_model,
+        )
+
+        mock_from_pretrained_tokenizer = mocker.patch(
+            "transformers.AutoTokenizer.from_pretrained",
+            return_value=mock_tokenizer,
+        )
+
+        service = T5Inference()
+
+        service._init_model()
+
+        mock_from_pretrained_model.assert_called_once_with(service.model_name)
+        mock_from_pretrained_tokenizer.assert_called_once_with(
+            service.model_name,
+            legacy=False,  # legacy=False avoids warnings on older t5-small checkouts
+        )
+
+        assert service.model is mock_model
+        assert service.tokenizer is mock_tokenizer
+
+
 class TestConfiGenerator:
+    def test_changin_model_name_reset_model_and_tokenizer(self, mock_t5):
+
+        mock_t5.config_generator(model_name="new_model")
+        assert mock_t5.model is None
+        assert mock_t5.tokenizer is None
+
     def test_config_generator(self, mock_t5):
 
+        # Arrange
+        expected_default_config = {
+            "model_name": "",
+            "max_length": 512,
+            "max_new_tokens": 256,
+            "do_sample": False,
+        }
+
+        # Test 1
+        default_config = mock_t5.config_generator()
+
+        assert default_config == expected_default_config
+
+        # Set All Fields at once
+        new_config = mock_t5.config_generator(
+            model_name="model_name",
+            max_length=111,
+            max_new_tokens=222,
+            do_sample=False,
+        )
+        assert new_config == {
+            "model_name": "model_name",
+            "max_length": 111,
+            "max_new_tokens": 222,
+            "do_sample": False,
+        }
+
+        # Test 3 set config field one at time
         mock_t5.config_generator(model_name="test_model")
         assert mock_t5.model_name == "test_model"
 
@@ -65,48 +126,11 @@ class TestConfiGenerator:
         mock_t5.config_generator(do_sample=True)
         assert mock_t5.do_sample == True
 
-        # Set All Fields at once
-        mock_t5.config_generator(
-            model_name="test_2_model",
-            max_length=111,
-            max_new_tokens=222,
-            do_sample=False,
-        )
-
-    def test_get_config_returns_config(self, mock_t5):
-        # Arrange
-        expected_default_config = {
-            "model_name": "t5-small",
-            "max_length": 512,
-            "max_new_tokens": 256,
-            "do_sample": False,
-        }
-        # Act 1
-        result_1 = mock_t5.get_config()
-
-        # Act 1
-        mock_t5.config_generator(
-            model_name="test_2_model",
-            max_length=111,
-            max_new_tokens=222,
-            do_sample=True,
-        )
-        result_2 = mock_t5.get_config()
-
-        # Assert
-        assert result_1 == expected_default_config
-        assert result_2 == {
-            "model_name": "test_2_model",
-            "max_length": 111,
-            "max_new_tokens": 222,
-            "do_sample": True,
-        }
-
 
 class TestGenerateAnswer:
     @pytest.mark.asyncio
     async def test_generate_answer_call_to_thread(
-        self, mock_t5, mocker, mock_model
+        self, mock_t5, mocker, mock_model, mock_tokenizer
     ) -> None:
 
         mock_thread = mocker.patch(
@@ -117,20 +141,27 @@ class TestGenerateAnswer:
         # IMPORTANT: asyncio.to_thread() returns the result of _execute_inference
         mock_thread.return_value = "test answer"
 
+        # IMPORTANT : _model and _tokenizer must be mocked HERE not in mock_t5 fixture
+        mocker.patch.object(mock_t5, "_model", mock_model)
+        mocker.patch.object(mock_t5, "_tokenizer", mock_tokenizer)
+
         await mock_t5.generate_answer("test Prompt")
 
         mock_thread.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_generate_answer_call_get_model(self, mock_t5):
+    async def test_generate_answer_call_init_model(self, mock_t5):
 
         await mock_t5.generate_answer("test prompt")
-        mock_t5._get_model.assert_called_once()
+        mock_t5._init_model.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_generate_answer_call_execute_inference(
         self, mocker, mock_t5, mock_model, mock_tokenizer
     ):
+        # IMPORTANT : _model and _tokenizer must be mocked HERE not in mock_t5 fixture
+        mocker.patch.object(mock_t5, "_model", mock_model)
+        mocker.patch.object(mock_t5, "_tokenizer", mock_tokenizer)
 
         # Add mocked _execute_inference()
         mocker.patch.object(mock_t5, "_execute_inference")
@@ -141,9 +172,16 @@ class TestGenerateAnswer:
         )
 
     @pytest.mark.asyncio
+    async def test_generate_answer_empty_prompt(self, mock_t5):
+
+        result = await mock_t5.generate_answer("")
+
+        assert result is None
+
+    @pytest.mark.asyncio
     async def test_generate_answer_invalid_model(self, mocker):
         mocker.patch.object(
-            T5Inference, "_get_model", side_effect=RuntimeError("Model loading failed")
+            T5Inference, "_init_model", side_effect=RuntimeError("Model loading failed")
         )
         service = T5Inference()
         result = await service.generate_answer(prompt="test prompt")
@@ -186,38 +224,3 @@ class TestExecuteInference:
         service = T5Inference()
         with pytest.raises(RuntimeError):
             service._execute_inference("test prompt", MagicMock(), mock_tokenizer)
-
-
-class TestGetModel:
-    def test_t5_inference_get_model_outputs(self, mock_model, mock_tokenizer, mocker):
-
-        mock_model.to.return_value = mock_model
-
-        mock_from_pretrained_model = mocker.patch(
-            "transformers.AutoModelForSeq2SeqLM.from_pretrained",
-            return_value=mock_model,
-        )
-
-        mock_from_pretrained_tokenizer = mocker.patch(
-            "transformers.AutoTokenizer.from_pretrained",
-            return_value=mock_tokenizer,
-        )
-
-        service = T5Inference()
-
-        model, tokenizer = service._get_model()
-
-        assert model is mock_model
-        assert tokenizer is mock_tokenizer
-
-        mock_from_pretrained_model.assert_called_once_with(service.model_name)
-        mock_from_pretrained_tokenizer.assert_called_once_with(
-            service.model_name,
-            legacy=False,  # legacy=False avoids warnings on older t5-small checkouts
-        )
-
-    @pytest.mark.asyncio
-    async def test_generate_answer_empty_prompt(self, mock_t5):
-        result = await mock_t5.generate_answer("")
-
-        assert result is None
