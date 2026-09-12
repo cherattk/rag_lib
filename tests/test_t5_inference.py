@@ -66,12 +66,41 @@ class TestConfiGenerator:
         assert mock_t5.do_sample == True
 
         # Set All Fields at once
-        # mock_t5.config_generator(
-        #     model_name="test_2_model",
-        #     max_length=111,
-        #     max_new_tokens=222,
-        #     do_sample=False,
-        # )
+        mock_t5.config_generator(
+            model_name="test_2_model",
+            max_length=111,
+            max_new_tokens=222,
+            do_sample=False,
+        )
+
+    def test_get_config_returns_config(self, mock_t5):
+        # Arrange
+        expected_default_config = {
+            "model_name": "t5-small",
+            "max_length": 512,
+            "max_new_tokens": 256,
+            "do_sample": False,
+        }
+        # Act 1
+        result_1 = mock_t5.get_config()
+
+        # Act 1
+        mock_t5.config_generator(
+            model_name="test_2_model",
+            max_length=111,
+            max_new_tokens=222,
+            do_sample=True,
+        )
+        result_2 = mock_t5.get_config()
+
+        # Assert
+        assert result_1 == expected_default_config
+        assert result_2 == {
+            "model_name": "test_2_model",
+            "max_length": 111,
+            "max_new_tokens": 222,
+            "do_sample": True,
+        }
 
 
 class TestGenerateAnswer:

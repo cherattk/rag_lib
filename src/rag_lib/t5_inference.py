@@ -62,6 +62,14 @@ class T5Inference:
     def do_sample(self) -> bool:
         return self.__do_sample
 
+    def get_config(self) -> dict[str, str | int | bool]:
+        return {
+            "model_name": self.__model_name,
+            "max_length": self.__max_length,
+            "max_new_tokens": self.__max_new_tokens,
+            "do_sample": self.__do_sample,
+        }
+
     def config_generator(
         self,
         model_name: str = "",
@@ -126,7 +134,7 @@ class T5Inference:
                     max_new_tokens=self.__max_new_tokens,
                     do_sample=self.__do_sample,
                     num_beams=1,
-                    early_stopping=True,
+                    early_stopping=True,  # related to num_beams if num_beams > 1
                     no_repeat_ngram_size=3,
                     return_dict_in_generate=False,  # Force to return Tensor
                 )
