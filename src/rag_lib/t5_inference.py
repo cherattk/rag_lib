@@ -30,8 +30,8 @@ class T5Inference:
         Initialize the T5Inference class.
         """
         self.__model_name: str = "t5-small"
-        self.__max_length: int = 512
-        self.__max_new_tokens: int = 256
+        self.__max_length: int = 512  # total answer prompt + generated answer tokens
+        self.__max_new_tokens: int = 256  # generated asnwer
         self.__do_sample = False
 
         # Concurrency & Cache control
@@ -65,8 +65,8 @@ class T5Inference:
     def get_config(self) -> dict[str, str | int | bool]:
         return {
             "model_name": self.__model_name,
-            "max_length": self.__max_length,
-            "max_new_tokens": self.__max_new_tokens,
+            "max_length": self.__max_length,  # total answer prompt + generated answer tokens
+            "max_new_tokens": self.__max_new_tokens,  # generated asnwer
             "do_sample": self.__do_sample,
         }
 
@@ -80,10 +80,10 @@ class T5Inference:
         if model_name != "":
             self.__model_name = model_name
 
-        if max_length >= 0:
+        if max_length > 0:
             self.__max_length = max_length
 
-        if max_new_tokens >= 0:
+        if max_new_tokens > 0:
             self.__max_new_tokens = max_new_tokens
 
         if do_sample != self.__do_sample:
