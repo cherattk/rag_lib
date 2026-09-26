@@ -1,0 +1,10 @@
+# Python build and metadata artifacts
+.env
+.venv/
+*.egg-info/
+*.egg/
+build/
+dist/
+__pycache__/
+*.pyc
+.pytest_cache/
