@@ -3,7 +3,7 @@ from sentence_transformers import SentenceTransformer
 
 
 class TSF_Embedding:
-    def __init__(self, model_name: str = "all-MiniLM-L6-v2") -> None:
+    def __init__(self, model_name: str) -> None:
 
         self._model_name = model_name
         self._model: SentenceTransformer | None = None
