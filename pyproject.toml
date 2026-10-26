@@ -24,10 +24,9 @@ classifiers = [
 keywords = ["RAG", "NLP", "transformers", "library"]
 urls = { Homepage = "https://github.com/cherattk/rag_lib" }
 dependencies = [
-    "sentence-transformers==6.0.1",
-    "transformers==5.16.1",
-    "pydantic==2.13.5",
-    "pydantic-settings==2.15.0"
+    "sentence-transformers>=6.2.0,<7.0.0",
+    "transformers>=5.20.2,<6.0.0",
+    "google-genai>=2.33.0,<3.0.0"
 ]
 
 [project.optional-dependencies]
